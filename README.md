@@ -2,10 +2,56 @@
 
 A multi-tenant SaaS starter built with Next.js, Supabase and Stripe, with a Claude-powered agent that respects tenant boundaries.
 
-- Tenant isolation enforced in Postgres with Row Level Security
-- Stripe subscriptions driven by verified webhooks
-- AI agent whose tools run under the caller's permissions
-- Vitest and Playwright suites that prove tenant A never sees tenant B's data
-- `AUDIT_CHECKLIST.md` — what to verify in Lovable and other AI-generated code
+## Project structure
 
-> Work in progress.
+```
+apps/
+  web/            Next.js application
+packages/
+  config/         Shared TypeScript and ESLint configuration
+```
+
+Planned additions: `packages/db`, `packages/billing`, `packages/ai`, `apps/e2e` and `supabase/`.
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 24 (see `.nvmrc`)
+- Corepack, bundled with Node.js, to provide Yarn 4
+- Docker, for the container image and the local Supabase stack
+
+### Setup
+
+```bash
+nvm use
+corepack enable
+yarn install
+cp .env.example .env
+yarn dev
+```
+
+### Run with Docker
+
+```bash
+yarn docker:up
+```
+
+## Scripts
+
+| Command             | Description                        |
+| ------------------- | ---------------------------------- |
+| `yarn dev`          | Start the development server       |
+| `yarn build`        | Build all workspaces               |
+| `yarn lint`         | Lint all workspaces, warnings fail |
+| `yarn typecheck`    | Type-check all workspaces          |
+| `yarn test`         | Run tests                          |
+| `yarn format`       | Format the codebase with Prettier  |
+| `yarn format:check` | Check formatting                   |
+| `yarn docker:up`    | Build and run the app in Docker    |
+
+## Continuous integration
+
+- **Lint, typecheck and test**: formatting, ESLint, TypeScript, tests and a production build
+- **Docker image**: builds the production image
+- **Dependency audit**: fails on known high or critical vulnerabilities
