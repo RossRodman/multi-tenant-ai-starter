@@ -6,6 +6,7 @@
   "exports": {
     "./eslint": "./eslint/base.js",
     "./eslint/next": "./eslint/next.js",
+    "./eslint/package": "./eslint/package.js",
     "./tsconfig/base.json": "./tsconfig/base.json",
     "./tsconfig/nextjs.json": "./tsconfig/nextjs.json"
   },
