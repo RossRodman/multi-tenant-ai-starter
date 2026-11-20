@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   check:
-    name: Lint, typecheck and test
+    name: Lint, typecheck and build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -35,9 +35,37 @@ jobs:
 
       - run: yarn typecheck
 
-      - run: yarn test
-
       - run: yarn build
+
+  db:
+    name: Database
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - run: yarn install --immutable
+
+      - run: yarn supabase start -x studio,imgproxy,edge-runtime,vector,logflare
+
+      - run: yarn supabase db lint --fail-on error
+
+      - run: yarn db:types
+
+      - name: Check generated types are up to date
+        run: git diff --exit-code -- packages/db/src/database.types.ts
+
+      - name: Export local stack credentials
+        run: yarn db:env > .env
+
+      - run: yarn test
 
   docker:
     name: Docker image

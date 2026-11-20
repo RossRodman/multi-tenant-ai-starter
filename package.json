@@ -17,10 +17,17 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "docker:up": "docker compose up --build"
+    "docker:up": "docker compose up --build",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:types": "t=$(mktemp) && supabase gen types typescript > \"$t\" && mv \"$t\" packages/db/src/database.types.ts",
+    "db:env": "supabase status -o env --override-name api.url=NEXT_PUBLIC_SUPABASE_URL --override-name auth.publishable_key=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY --override-name auth.secret_key=SUPABASE_SECRET_KEY --override-name db.url=SUPABASE_DB_URL | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY|SUPABASE_SECRET_KEY|SUPABASE_DB_URL)='",
+    "db:push": "supabase db push --remote"
   },
   "devDependencies": {
     "prettier": "^3.10.1",
+    "supabase": "^3.2.0",
     "turbo": "^2.11.11",
     "typescript": "~6.0.3"
   }
