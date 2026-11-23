@@ -1,3 +1,4 @@
+import pg from "pg";
 import { describe, expect, it } from "vitest";
 
 import { createServerClient } from "../src";
@@ -29,7 +30,19 @@ describe("createServerClient", () => {
     const client = createServerClient({ ...options, cookies: first.adapter });
 
     const email = `cookie-seam-${crypto.randomUUID()}@example.com`;
-    const { data, error } = await client.auth.signUp({
+    const signUp = await client.auth.signUp({
+      email,
+      password: "correct-horse-battery",
+    });
+    expect(signUp.error).toBeNull();
+    expect(signUp.data.session).toBeNull();
+
+    const db = new pg.Client({ connectionString: env.dbUrl });
+    await db.connect();
+    await db.query("update auth.users set email_confirmed_at = now() where email = $1", [email]);
+    await db.end();
+
+    const { data, error } = await client.auth.signInWithPassword({
       email,
       password: "correct-horse-battery",
     });

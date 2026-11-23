@@ -22,7 +22,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:types": "t=$(mktemp) && supabase gen types typescript > \"$t\" && mv \"$t\" packages/db/src/database.types.ts",
-    "db:env": "supabase status -o env --override-name api.url=NEXT_PUBLIC_SUPABASE_URL --override-name auth.publishable_key=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY --override-name auth.secret_key=SUPABASE_SECRET_KEY --override-name db.url=SUPABASE_DB_URL | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY|SUPABASE_SECRET_KEY|SUPABASE_DB_URL)='",
+    "db:env": "supabase status -o env --override-name api.url=NEXT_PUBLIC_SUPABASE_URL --override-name auth.publishable_key=NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY --override-name auth.secret_key=SUPABASE_SECRET_KEY --override-name db.url=SUPABASE_DB_URL --override-name api.mailpit_url=MAILPIT_URL | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY|SUPABASE_SECRET_KEY|SUPABASE_DB_URL|MAILPIT_URL)='",
     "db:push": "supabase db push --remote"
   },
   "devDependencies": {

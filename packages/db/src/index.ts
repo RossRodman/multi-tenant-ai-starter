@@ -4,3 +4,5 @@ export { createBrowserClient } from "./browser";
 export type { BrowserClientOptions } from "./browser";
 export { createServerClient } from "./server";
 export type { ServerClientOptions } from "./server";
+export { createSessionlessClient } from "./sessionless";
+export type { SessionlessClientOptions } from "./sessionless";

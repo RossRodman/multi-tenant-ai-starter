@@ -1,1 +1,55 @@
 @import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #18181b;
+  --primary: #18181b;
+  --primary-foreground: #ffffff;
+  --muted-foreground: #71717a;
+  --input: #e4e4e7;
+  --ring: #2563eb;
+  --destructive: #b91c1c;
+  --success-muted: #f0fdf4;
+  --success-muted-foreground: #14532d;
+  --destructive-muted: #fef2f2;
+  --destructive-muted-foreground: #991b1b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #18181b;
+    --foreground: #fafafa;
+    --primary: #fafafa;
+    --primary-foreground: #18181b;
+    --muted-foreground: #a1a1aa;
+    --input: #3f3f46;
+    --ring: #60a5fa;
+    --destructive: #f87171;
+    --success-muted: #16331f;
+    --success-muted-foreground: #dcfce7;
+    --destructive-muted: #511d1f;
+    --destructive-muted-foreground: #fecaca;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-success-muted: var(--success-muted);
+  --color-success-muted-foreground: var(--success-muted-foreground);
+  --color-destructive-muted: var(--destructive-muted);
+  --color-destructive-muted-foreground: var(--destructive-muted-foreground);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
