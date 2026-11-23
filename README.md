@@ -6,7 +6,7 @@ A multi-tenant SaaS starter built with Next.js, Supabase and Stripe, with a Clau
 
 ```
 apps/
-  web/            Next.js application
+  web/            Next.js application (UI in src/app, backend code in src/server)
 packages/
   config/         Shared TypeScript and ESLint configuration
   db/             Typed Supabase client factories and generated database types
@@ -39,6 +39,8 @@ yarn dev
 yarn docker:up
 ```
 
+The container reads `.env`, where `127.0.0.1` points at the container itself. To use the local Supabase stack from Docker, set `NEXT_PUBLIC_SUPABASE_URL` to a host address the container can reach, such as `http://host.docker.internal:54321` on Docker Desktop.
+
 ## Database
 
 The schema lives in SQL migrations under `supabase/migrations`. Development, tests and CI run against a local Supabase stack in Docker; no hosted project is needed.
@@ -63,7 +65,7 @@ The local stack uses public default credentials and listens on all network inter
 
 Run `yarn db:types` after every migration and commit the result. CI fails when the committed types differ from the generated ones.
 
-Local auth emails are caught by Mailpit at http://127.0.0.1:54324.
+Local auth emails are caught by Mailpit at http://127.0.0.1:54324. The web app and the tests read `MAILPIT_URL` and the Supabase values from `.env`.
 
 ### Hosted Supabase
 
