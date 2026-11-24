@@ -108,3 +108,25 @@ export function extractLink(html: string) {
   if (!tokenHash || !type) throw new Error(`Unexpected link ${href}`);
   return { url, tokenHash, type };
 }
+
+let admin: ReturnType<typeof createSessionlessClient> | undefined;
+
+export function createAdminClient() {
+  admin ??= createSessionlessClient({ url: env.url, key: env.secretKey });
+  return admin;
+}
+
+export async function createUser(label: string) {
+  const email = uniqueEmail(label);
+  const created = await createAdminClient().auth.admin.createUser({
+    email,
+    password: PASSWORD,
+    email_confirm: true,
+  });
+  if (created.error) throw created.error;
+
+  const { client } = createTestClient();
+  const signedIn = await client.auth.signInWithPassword({ email, password: PASSWORD });
+  if (signedIn.error) throw signedIn.error;
+  return { id: created.data.user.id, client };
+}

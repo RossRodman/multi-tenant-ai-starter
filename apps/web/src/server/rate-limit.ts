@@ -3,6 +3,8 @@ import "server-only";
 export const WINDOW_MS = 15 * 60 * 1000;
 export const IP_LIMIT = 30;
 export const IP_EMAIL_LIMIT = 5;
+export const ORG_CREATE_LIMIT = 10;
+const ORG_CREATE_WINDOW_MS = 60 * 60 * 1000;
 
 const SWEEP_ABOVE = 10_000;
 
@@ -57,6 +59,11 @@ export function createAuthLimiter(now?: () => number) {
 }
 
 export const authLimiter = createAuthLimiter();
+
+export const orgCreateLimiter = createRateLimiter({
+  limit: ORG_CREATE_LIMIT,
+  windowMs: ORG_CREATE_WINDOW_MS,
+});
 
 export function clientIp(headers: Headers, trustedProxyHops: number) {
   const hops = (headers.get("x-forwarded-for") ?? "")

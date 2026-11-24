@@ -8,6 +8,7 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 const schema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+  SUPABASE_SECRET_KEY: z.string().min(1),
   SUPABASE_DB_URL: z.url(),
   MAILPIT_URL: z.url().default("http://127.0.0.1:54324"),
 });
@@ -24,6 +25,7 @@ if (!parsed.success) {
 export const env = {
   url: parsed.data.NEXT_PUBLIC_SUPABASE_URL,
   publishableKey: parsed.data.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  secretKey: parsed.data.SUPABASE_SECRET_KEY,
   dbUrl: parsed.data.SUPABASE_DB_URL,
   mailpitUrl: parsed.data.MAILPIT_URL,
 };
