@@ -23,7 +23,41 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            [_ in never]: never
+            "memberships": {
+                  Row: {
+                    "created_at": string,"organization_id": string,"role": Database["public"]['Enums']["membership_role"],"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"organization_id": string,"role": Database["public"]['Enums']["membership_role"],"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"organization_id"?: string,"role"?: Database["public"]['Enums']["membership_role"],"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "memberships_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"organizations": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string,"slug": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name": string,"slug": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string,"slug"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                }
           }
           Views: {
             [_ in never]: never
@@ -32,7 +66,7 @@ export type Database = {
             [_ in never]: never
           }
           Enums: {
-            [_ in never]: never
+            "membership_role": "owner"|"admin"|"member"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -152,7 +186,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            
+            "membership_role": ["owner", "admin", "member"]
           }
         }
 } as const

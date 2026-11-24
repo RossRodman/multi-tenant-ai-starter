@@ -26,4 +26,4 @@ function Button({
   return <button className={cn(buttonVariants({ variant }), className)} {...props} />;
 }
 
-export { Button };
+export { Button, buttonVariants };
