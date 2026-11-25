@@ -4,6 +4,8 @@ import { parseServerEnv } from "../src/server/env";
 
 const DEMO_KEY = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
 
+const mail = { SMTP_URL: "smtps://smtp.example.com:465", MAIL_FROM: "no-reply@example.com" };
+
 const local = {
   NEXT_PUBLIC_APP_URL: "http://localhost:3000",
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
@@ -11,6 +13,7 @@ const local = {
 };
 
 const hosted = {
+  ...mail,
   NEXT_PUBLIC_APP_URL: "https://app.example.com",
   NEXT_PUBLIC_SUPABASE_URL: "https://abc.supabase.co",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_hosted",
@@ -60,7 +63,7 @@ describe("parseServerEnv", () => {
 
   describe("production guard", () => {
     it("lets a loopback app use a local Supabase", () => {
-      expect(() => parseServerEnv(local, "production")).not.toThrow();
+      expect(() => parseServerEnv({ ...mail, ...local }, "production")).not.toThrow();
     });
 
     it("accepts a public app with a hosted Supabase", () => {
@@ -87,5 +90,56 @@ describe("parseServerEnv", () => {
         parseServerEnv({ ...local, NEXT_PUBLIC_APP_URL: "https://app.example.com" }, "development"),
       ).not.toThrow();
     });
+  });
+});
+
+describe("mail settings", () => {
+  it("default to the local Mailpit outside production", () => {
+    expect(parseServerEnv(local, "development")).toMatchObject({
+      smtpUrl: "smtp://127.0.0.1:54325",
+      mailFrom: "Multi-tenant AI Starter <no-reply@localhost>",
+    });
+  });
+
+  it("are required in production", () => {
+    expect(() =>
+      parseServerEnv({ ...hosted, SMTP_URL: undefined, MAIL_FROM: undefined }, "production"),
+    ).toThrow(/SMTP_URL.*MAIL_FROM/s);
+    expect(parseServerEnv(hosted, "production")).toMatchObject({
+      smtpUrl: mail.SMTP_URL,
+      mailFrom: mail.MAIL_FROM,
+    });
+  });
+
+  it.each(["http://smtp.example.com", "smtp.example.com:25", "not a url"])(
+    "reject SMTP_URL=%j",
+    (value) => {
+      expect(() => parseServerEnv({ ...local, SMTP_URL: value }, "development")).toThrow(
+        /SMTP_URL/,
+      );
+    },
+  );
+
+  it.each(["Acme <hello@example.com>", "hello@example.com"])("accept MAIL_FROM=%j", (value) => {
+    expect(parseServerEnv({ ...local, MAIL_FROM: value }, "development").mailFrom).toBe(value);
+  });
+
+  it.each([
+    "nobody",
+    "Acme <nobody>",
+    "a@b.c\r\nBcc: x@y.z",
+    "<a@b.c>",
+    "x@y.z, q@r.s",
+    "Acme, Inc <a@b.c>",
+    "Acme; Inc <a@b.c>",
+    "Acme: Inc <a@b.c>",
+    "Acme (Inc) <a@b.c>",
+    "a,b@c.d",
+    "a;b@c.d",
+    "a@b.c;d",
+  ])("reject MAIL_FROM=%j", (value) => {
+    expect(() => parseServerEnv({ ...local, MAIL_FROM: value }, "development")).toThrow(
+      /MAIL_FROM/,
+    );
   });
 });

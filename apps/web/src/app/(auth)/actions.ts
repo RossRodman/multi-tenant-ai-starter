@@ -22,8 +22,11 @@ import {
   verifyEmailLink,
 } from "@/server/auth";
 import type { AuthResult } from "@/server/auth";
+import { text } from "@/lib/form";
 import { PASSWORD_LENGTH_MESSAGE } from "@/lib/password";
 import { getServerEnv } from "@/server/env";
+import { displayNameSchema } from "@/server/display-name";
+import { forgetOrganization } from "@/server/organizations";
 import { authLimiter, clientIp } from "@/server/rate-limit";
 import { getSessionlessSupabase, getSupabase } from "@/server/supabase/client";
 import {
@@ -32,12 +35,8 @@ import {
   markRecoverySession,
 } from "@/server/supabase/recovery";
 
+import { NAME_MESSAGE } from "./form-state";
 import type { FormState } from "./form-state";
-
-function text(formData: FormData, name: string) {
-  const value = formData.get(name);
-  return typeof value === "string" ? value : "";
-}
 
 function parseEmail(formData: FormData) {
   const parsed = emailSchema.safeParse(text(formData, "email"));
@@ -82,18 +81,29 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
 }
 
 export async function signUpAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const rawName = text(formData, "name");
+  const name = displayNameSchema.safeParse(rawName);
   const parsed = parseEmail(formData);
-  if (!parsed) return invalidEmail;
+  if (!name.success) {
+    return { fieldErrors: { name: NAME_MESSAGE }, email: parsed?.email, name: rawName };
+  }
+  if (!parsed) return { ...invalidEmail, name: name.data };
   const { email } = parsed;
 
   const password = passwordSchema.safeParse(text(formData, "password"));
   if (!password.success) {
-    return { fieldErrors: { password: PASSWORD_LENGTH_MESSAGE }, email };
+    return { fieldErrors: { password: PASSWORD_LENGTH_MESSAGE }, email, name: name.data };
   }
 
-  if (!(await allowed(email))) return { ...rateLimited, email };
-  const result = await signUp(getSessionlessSupabase(), { email, password: password.data });
-  return result.ok ? { notice: "check-email", email } : failed(result, email);
+  if (!(await allowed(email))) return { ...rateLimited, email, name: name.data };
+  const result = await signUp(getSessionlessSupabase(), {
+    email,
+    password: password.data,
+    name: name.data,
+  });
+  return result.ok
+    ? { notice: "check-email", email }
+    : { ...failed(result, email), name: name.data };
 }
 
 export async function requestPasswordResetAction(
@@ -132,6 +142,7 @@ export async function confirmEmailAction(formData: FormData): Promise<void> {
   const link = parseEmailLink({
     token_hash: text(formData, "token_hash"),
     type: text(formData, "type"),
+    email: text(formData, "email"),
   });
   if (!link) redirect("/auth/confirm?error=invalid_link");
   if (!(await allowed())) redirect("/auth/confirm?error=rate_limited");
@@ -164,5 +175,6 @@ export async function googleSignInAction(_prev: FormState, formData: FormData): 
 export async function signOutAction(): Promise<void> {
   await signOut(await getSupabase());
   await clearRecoveryMarker();
+  await forgetOrganization();
   redirect("/sign-in");
 }

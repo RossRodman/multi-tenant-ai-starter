@@ -4,6 +4,7 @@ import type { Client } from "@repo/db";
 
 import { SLUG_MAX, SLUG_MIN, toSlug } from "@/lib/slug";
 
+import { UNIQUE_VIOLATION } from "../pg-errors";
 import { nameSchema, slugSchema } from "./schemas";
 
 export type CreateOrganizationError = "invalid_name" | "invalid_slug" | "slug_taken" | "unknown";
@@ -11,7 +12,6 @@ export type CreateOrganizationError = "invalid_name" | "invalid_slug" | "slug_ta
 type CreateOrganizationResult =
   { ok: true; slug: string } | { ok: false; error: CreateOrganizationError };
 
-const UNIQUE_VIOLATION = "23505";
 const SUFFIX_LENGTH = 4;
 const BASE36_LIMIT = 252;
 const ATTEMPTS = 3;

@@ -33,7 +33,8 @@ describe("actions that send email", () => {
   it.each([
     [
       "sign-up",
-      () => signUpAction({}, form({ email: "a@example.com", password: "long-enough-1" })),
+      () =>
+        signUpAction({}, form({ name: "Alex", email: "a@example.com", password: "long-enough-1" })),
     ],
     ["magic link", () => signInAction({}, form({ email: "b@example.com", intent: "magic-link" }))],
     ["resend", () => signInAction({}, form({ email: "c@example.com", intent: "resend" }))],
@@ -42,5 +43,31 @@ describe("actions that send email", () => {
     expect((await run()).notice).toBeDefined();
     expect(getSessionlessSupabase).toHaveBeenCalledOnce();
     expect(getSupabase).not.toHaveBeenCalled();
+  });
+});
+
+describe("signUpAction name", () => {
+  it.each(["", "   ", "\u200b", "a\u202eb"])(
+    "rejects the name %j without a Supabase call",
+    async (name) => {
+      const state = await signUpAction(
+        {},
+        form({ name, email: "a@example.com", password: "long-enough-1" }),
+      );
+      expect(state.fieldErrors?.name).toBeDefined();
+      expect(sessionless.auth.signUp).not.toHaveBeenCalled();
+    },
+  );
+
+  it("sends the trimmed name as user metadata", async () => {
+    await signUpAction(
+      {},
+      form({ name: "  Alex Morgan ", email: "a@example.com", password: "long-enough-1" }),
+    );
+    expect(sessionless.auth.signUp).toHaveBeenCalledWith({
+      email: "a@example.com",
+      password: "long-enough-1",
+      options: { data: { name: "Alex Morgan" } },
+    });
   });
 });

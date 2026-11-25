@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const rootEnv = resolve(import.meta.dirname, "../../../.env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+process.env.NEXT_PUBLIC_APP_URL ??= "http://localhost:3000";
 
 const schema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),

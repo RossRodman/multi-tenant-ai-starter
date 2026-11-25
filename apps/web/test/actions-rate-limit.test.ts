@@ -69,6 +69,7 @@ describe("confirm rate limit", () => {
     const form = new FormData();
     form.set("token_hash", "abc");
     form.set("type", "signup");
+    form.set("email", "someone@example.com");
 
     for (let i = 0; i < IP_LIMIT; i++) {
       await expect(confirmEmailAction(form)).rejects.toThrow(/^redirect:/);

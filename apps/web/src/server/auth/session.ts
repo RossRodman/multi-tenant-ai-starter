@@ -2,9 +2,12 @@ import "server-only";
 
 import type { Client } from "@repo/db";
 
+import { displayNameSchema } from "../display-name";
+
 export interface SessionUser {
   id: string;
   email: string | null;
+  name: string | null;
   sessionId: string;
 }
 
@@ -16,6 +19,7 @@ export async function getSessionUser(client: Client): Promise<SessionUser | null
   return {
     id: claims.sub,
     email: claims.email ?? null,
+    name: displayNameSchema.safeParse(claims.user_metadata?.name).data ?? null,
     sessionId: claims.session_id,
   };
 }

@@ -3,7 +3,12 @@ import { afterAll, describe, expect, it, onTestFinished } from "vitest";
 
 import { SLUG_MAX, SLUG_PATTERN, toSlug } from "@/lib/slug";
 
-import { createOrganization, listOrganizations } from "../src/server/organizations";
+import {
+  createOrganization,
+  getOrganization,
+  listOrganizations,
+  updateOrganization,
+} from "../src/server/organizations";
 import { env } from "./env";
 import { createAdminClient, createUser } from "./harness";
 
@@ -189,5 +194,134 @@ describe("listOrganizations", () => {
     const colleagues = await listOrganizations(colleague.client, colleague.id);
     expect(colleagues).toHaveLength(3);
     expect(colleagues.filter((o) => o.role === "member")).toHaveLength(2);
+  });
+});
+
+describe("getOrganization", () => {
+  it("returns the organization with the caller's role, and null for everyone else", async () => {
+    const admin = await createUser("get-admin");
+    const outsider = await createUser("get-outsider");
+    const invitee = await createUser("get-invitee");
+    onTestFinished(() => cleanup([admin.id, outsider.id, invitee.id]));
+
+    const slug = `get-${run}`;
+    await createOrganization(owner.client, { name: nextName(), slug });
+    const { rows } = await db.query<{ id: string }>(
+      "select id from public.organizations where slug = $1",
+      [slug],
+    );
+    const orgId = rows[0]?.id;
+    await db.query("insert into public.memberships values ($1, $2, 'admin')", [orgId, admin.id]);
+    const invited = await owner.client
+      .from("invitations")
+      .insert({ organization_id: orgId ?? "", email: invitee.email, role: "member" });
+    expect(invited.error).toBeNull();
+
+    expect(await getOrganization(owner.client, owner.id, slug)).toMatchObject({
+      id: orgId,
+      slug,
+      role: "owner",
+    });
+    expect(await getOrganization(admin.client, admin.id, slug)).toMatchObject({ role: "admin" });
+    expect(await getOrganization(outsider.client, outsider.id, slug)).toBeNull();
+    expect(await getOrganization(owner.client, owner.id, `missing-${run}`)).toBeNull();
+
+    const readable = await invitee.client.from("organizations").select("id").eq("slug", slug);
+    expect(readable.data).toHaveLength(1);
+    expect(await getOrganization(invitee.client, invitee.id, slug)).toBeNull();
+    expect((await listOrganizations(invitee.client, invitee.id)).map((o) => o.slug)).toEqual([]);
+  });
+});
+
+describe("listOrganizations member count", () => {
+  it("counts every member of each organization", async () => {
+    const lister = await createUser("count-lister");
+    const colleague = await createUser("count-colleague");
+    onTestFinished(() => cleanup([lister.id, colleague.id]));
+    await createOrganization(lister.client, { name: nextName("Counted"), slug: "" });
+    await createOrganization(lister.client, { name: nextName("Solo"), slug: "" });
+    const { rows } = await db.query<{ id: string }>(
+      `select o.id from public.organizations o
+       join public.memberships m on m.organization_id = o.id
+       where m.user_id = $1 and o.name like 'Counted%'`,
+      [lister.id],
+    );
+    await db.query("insert into public.memberships values ($1, $2, 'member')", [
+      rows[0]?.id,
+      colleague.id,
+    ]);
+
+    const listed = await listOrganizations(lister.client, lister.id);
+    expect(listed.map(({ name, memberCount }) => [name.split(" ")[0], memberCount])).toEqual([
+      ["Counted", 2],
+      ["Solo", 1],
+    ]);
+  });
+});
+
+describe("updateOrganization", () => {
+  async function setup() {
+    const admin = await createUser("upd-admin");
+    const member = await createUser("upd-member");
+    onTestFinished(() => cleanup([admin.id, member.id]));
+    const slug = `upd-${crypto.randomUUID().slice(0, 8)}`;
+    await createOrganization(owner.client, { name: nextName("Update"), slug });
+    const { rows } = await db.query<{ id: string }>(
+      "select id from public.organizations where slug = $1",
+      [slug],
+    );
+    const id = rows[0]?.id ?? "";
+    await db.query("insert into public.memberships values ($1, $2, 'admin'), ($1, $3, 'member')", [
+      id,
+      admin.id,
+      member.id,
+    ]);
+    return { admin, member, id, slug };
+  }
+
+  it("renames and changes the slug for an owner and an admin", async () => {
+    const { admin, id } = await setup();
+    expect(await updateOrganization(owner.client, id, { name: "  New name  " })).toMatchObject({
+      ok: true,
+    });
+    const slug = `moved-${crypto.randomUUID().slice(0, 8)}`;
+    expect(await updateOrganization(admin.client, id, { slug: ` ${slug.toUpperCase()} ` })).toEqual(
+      { ok: true, slug },
+    );
+    const { rows } = await db.query("select name, slug from public.organizations where id = $1", [
+      id,
+    ]);
+    expect(rows[0]).toEqual({ name: "New name", slug });
+  });
+
+  it("maps validation, a taken slug and a member to their errors", async () => {
+    const { member, id } = await setup();
+    const taken = `taken-${crypto.randomUUID().slice(0, 8)}`;
+    await createOrganization(other.client, { name: nextName(), slug: taken });
+
+    expect(await updateOrganization(owner.client, id, { name: "  " })).toEqual({
+      ok: false,
+      error: "invalid_name",
+    });
+    expect(await updateOrganization(owner.client, id, { slug: "A_B" })).toEqual({
+      ok: false,
+      error: "invalid_slug",
+    });
+    expect(await updateOrganization(owner.client, id, { slug: "" })).toEqual({
+      ok: false,
+      error: "invalid_slug",
+    });
+    expect(await updateOrganization(owner.client, id, { slug: taken })).toEqual({
+      ok: false,
+      error: "slug_taken",
+    });
+    expect(await updateOrganization(member.client, id, { name: "Hijacked" })).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
+    expect(await updateOrganization(other.client, id, { name: "Hijacked" })).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
   });
 });

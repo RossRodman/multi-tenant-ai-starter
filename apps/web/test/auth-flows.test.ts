@@ -24,6 +24,7 @@ import {
   extractLink,
   findEmails,
   first,
+  NAME,
   PASSWORD,
   sessionCookie,
   sessionFromCookies,
@@ -38,10 +39,12 @@ afterAll(() => db.end());
 async function confirmedUser(label: string) {
   const email = uniqueEmail(label);
   const { client } = createTestClient();
-  expect(await signUp(client, { email, password: PASSWORD })).toEqual({ ok: true });
+  expect(await signUp(client, { email, password: PASSWORD, name: NAME })).toEqual({ ok: true });
   const link = extractLink((await waitForEmail(email)).html);
   expect(link.type).toBe("signup");
-  expect(await verifyEmailLink(client, { tokenHash: link.tokenHash, type: "signup" })).toEqual({
+  expect(
+    await verifyEmailLink(client, { tokenHash: link.tokenHash, type: "signup", email: link.email }),
+  ).toEqual({
     ok: true,
   });
   return email;
@@ -52,8 +55,13 @@ describe("sign-up and confirmation", () => {
     const email = uniqueEmail("signup");
     const { client } = createTestClient();
 
-    expect(await signUp(client, { email, password: PASSWORD })).toEqual({ ok: true });
+    expect(await signUp(client, { email, password: PASSWORD, name: NAME })).toEqual({ ok: true });
     expect(await getSessionUser(client)).toBeNull();
+    const { rows } = await db.query<{ name: string }>(
+      "select raw_user_meta_data ->> 'name' as name from auth.users where email = $1",
+      [email],
+    );
+    expect(rows[0]?.name).toBe(NAME);
     expect(await signInWithPassword(client, { email, password: PASSWORD })).toEqual({
       ok: false,
       error: "email_not_confirmed",
@@ -65,15 +73,23 @@ describe("sign-up and confirmation", () => {
     await expect.poll(async () => (await findEmails(email)).length).toBe(2);
 
     const link = extractLink(first(await findEmails(email)).html);
-    expect(await verifyEmailLink(client, { tokenHash: link.tokenHash, type: "signup" })).toEqual({
+    expect(
+      await verifyEmailLink(client, {
+        tokenHash: link.tokenHash,
+        type: "signup",
+        email: link.email,
+      }),
+    ).toEqual({
       ok: true,
     });
-    expect((await getSessionUser(client))?.email).toBe(email);
+    expect(await getSessionUser(client)).toMatchObject({ email, name: NAME });
   });
 
   it("rejects short passwords", async () => {
     const { client } = createTestClient();
-    expect(await signUp(client, { email: uniqueEmail("weak"), password: "short" })).toEqual({
+    expect(
+      await signUp(client, { email: uniqueEmail("weak"), password: "short", name: NAME }),
+    ).toEqual({
       ok: false,
       error: "weak_password",
     });
@@ -82,7 +98,9 @@ describe("sign-up and confirmation", () => {
   it("answers the same for an already registered email", async () => {
     const email = await confirmedUser("dup");
     const { client } = createTestClient();
-    expect(await signUp(client, { email, password: "another-password-1" })).toEqual({ ok: true });
+    expect(await signUp(client, { email, password: "another-password-1", name: NAME })).toEqual({
+      ok: true,
+    });
     expect(await getSessionUser(client)).toBeNull();
   });
 });
@@ -90,13 +108,21 @@ describe("sign-up and confirmation", () => {
 describe("email links", () => {
   it("carry a plain token hash that verifies in another client", async () => {
     const email = uniqueEmail("plain-link");
-    expect(await signUp(createEmailClient(), { email, password: PASSWORD })).toEqual({ ok: true });
+    expect(await signUp(createEmailClient(), { email, password: PASSWORD, name: NAME })).toEqual({
+      ok: true,
+    });
 
     const link = extractLink((await waitForEmail(email)).html);
     expect(link.tokenHash).not.toMatch(/^pkce_/);
 
     const { client, jar } = createTestClient();
-    expect(await verifyEmailLink(client, { tokenHash: link.tokenHash, type: "signup" })).toEqual({
+    expect(
+      await verifyEmailLink(client, {
+        tokenHash: link.tokenHash,
+        type: "signup",
+        email: link.email,
+      }),
+    ).toEqual({
       ok: true,
     });
     expect(await getSessionUser(client)).not.toBeNull();
@@ -118,12 +144,14 @@ describe("per-user email limit", () => {
 
   it("does not show up for a known email on sign-up", async () => {
     const email = uniqueEmail("limit-signup");
-    expect(await sendsEmail((c) => signUp(c, { email, password: PASSWORD }))).toEqual(ok);
+    expect(await sendsEmail((c) => signUp(c, { email, password: PASSWORD, name: NAME }))).toEqual(
+      ok,
+    );
   });
 
   it("does not show up for a known email on resend", async () => {
     const email = uniqueEmail("limit-resend");
-    await signUp(createTestClient().client, { email, password: PASSWORD });
+    await signUp(createTestClient().client, { email, password: PASSWORD, name: NAME });
     expect(await sendsEmail((c) => resendConfirmation(c, email))).toEqual(ok);
   });
 
@@ -161,7 +189,7 @@ describe("password sign-in", () => {
   it("shows email_not_confirmed only after the password checked out", async () => {
     const email = uniqueEmail("unconfirmed");
     const { client } = createTestClient();
-    await signUp(client, { email, password: PASSWORD });
+    await signUp(client, { email, password: PASSWORD, name: NAME });
     expect(await signInWithPassword(client, { email, password: "wrong-password-1" })).toEqual({
       ok: false,
       error: "invalid_credentials",
@@ -180,9 +208,13 @@ describe("magic link", () => {
 
     const link = extractLink(first(await findEmails(email)).html);
     expect(link.type).toBe("magiclink");
-    expect(await verifyEmailLink(client, { tokenHash: link.tokenHash, type: "magiclink" })).toEqual(
-      { ok: true },
-    );
+    expect(
+      await verifyEmailLink(client, {
+        tokenHash: link.tokenHash,
+        type: "magiclink",
+        email: link.email,
+      }),
+    ).toEqual({ ok: true });
     expect((await getSessionUser(client))?.email).toBe(email);
   });
 
@@ -232,7 +264,11 @@ describe("password reset", () => {
     const link = extractLink(first(await findEmails(email)).html);
     expect(link.type).toBe("recovery");
     expect(
-      await verifyEmailLink(recovery.client, { tokenHash: link.tokenHash, type: "recovery" }),
+      await verifyEmailLink(recovery.client, {
+        tokenHash: link.tokenHash,
+        type: "recovery",
+        email: link.email,
+      }),
     ).toEqual({ ok: true });
 
     const session = await getSessionUser(recovery.client);
@@ -257,26 +293,41 @@ describe("password reset", () => {
 describe("email link verification", () => {
   it("leaves the token valid until it is verified, and accepts it once", async () => {
     const email = uniqueEmail("once");
-    await signUp(createTestClient().client, { email, password: PASSWORD });
-    const { url, tokenHash } = extractLink((await waitForEmail(email)).html);
+    await signUp(createTestClient().client, { email, password: PASSWORD, name: NAME });
+    const { url, tokenHash, email: linkEmail } = extractLink((await waitForEmail(email)).html);
 
     const page = parseEmailLink({
       token_hash: url.searchParams.get("token_hash") ?? undefined,
       type: url.searchParams.get("type") ?? undefined,
+      email: url.searchParams.get("email") ?? undefined,
     });
-    expect(page).toEqual({ tokenHash, type: "signup" });
+    expect(page).toEqual({ tokenHash, type: "signup", email });
 
-    expect(await verifyEmailLink(createTestClient().client, { tokenHash, type: "signup" })).toEqual(
-      { ok: true },
-    );
-    expect(await verifyEmailLink(createTestClient().client, { tokenHash, type: "signup" })).toEqual(
-      { ok: false, error: "invalid_link" },
-    );
+    expect(
+      await verifyEmailLink(createTestClient().client, {
+        tokenHash,
+        type: "signup",
+        email: linkEmail,
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      await verifyEmailLink(createTestClient().client, {
+        tokenHash,
+        type: "signup",
+        email: linkEmail,
+      }),
+    ).toEqual({ ok: false, error: "invalid_link" });
   });
 
   it("rejects a made-up token", async () => {
     const { client } = createTestClient();
-    expect(await verifyEmailLink(client, { tokenHash: "nope", type: "magiclink" })).toEqual({
+    expect(
+      await verifyEmailLink(client, {
+        tokenHash: "nope",
+        type: "magiclink",
+        email: "a@example.com",
+      }),
+    ).toEqual({
       ok: false,
       error: "invalid_link",
     });

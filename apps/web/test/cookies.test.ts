@@ -6,6 +6,7 @@ import {
   appUrl,
   createTestClient,
   extractLink,
+  NAME,
   PASSWORD,
   uniqueEmail,
   waitForEmail,
@@ -18,9 +19,9 @@ afterEach(() => {
 async function signedIn() {
   const email = uniqueEmail("cookies");
   const { client, jar } = createTestClient();
-  await signUp(client, { email, password: PASSWORD });
+  await signUp(client, { email, password: PASSWORD, name: NAME });
   const link = extractLink((await waitForEmail(email)).html);
-  await verifyEmailLink(client, { tokenHash: link.tokenHash, type: "signup" });
+  await verifyEmailLink(client, { tokenHash: link.tokenHash, type: "signup", email: link.email });
   return { client, jar, email };
 }
 
