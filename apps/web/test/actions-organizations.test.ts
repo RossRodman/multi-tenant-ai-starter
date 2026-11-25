@@ -3,10 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const insert = vi.fn();
 const getSupabase = vi.fn(() => Promise.resolve({ from: () => ({ insert }) }));
 const revalidatePath = vi.fn();
+const acceptInvitation = vi.fn();
+const rememberOrganization = vi.fn();
 const requireUser = vi.fn(() => Promise.resolve({ id: "user-1", email: null, sessionId: "s" }));
 
 vi.mock("@/server/session", () => ({ requireUser }));
 vi.mock("@/server/supabase/client", () => ({ getSupabase }));
+vi.mock("@/server/invitations", () => ({ acceptInvitation }));
+vi.mock("@/server/organizations/remember", () => ({ rememberOrganization }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
@@ -14,7 +18,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 
-const { createOrganizationAction } = await import("../src/app/app/actions");
+const { acceptInvitationAction, createOrganizationAction } = await import("../src/app/app/actions");
 const { fieldMessages } = await import("../src/app/app/form-state");
 const { ORG_CREATE_LIMIT } = await import("../src/server/rate-limit");
 
@@ -104,5 +108,28 @@ describe("createOrganizationAction", () => {
     requireUser.mockResolvedValue({ id: crypto.randomUUID(), email: null, sessionId: "s" });
     await createOrganizationAction({}, form("Acme", "acme"));
     expect(getSupabase).toHaveBeenCalled();
+  });
+});
+
+describe("acceptInvitationAction", () => {
+  const id = "5f0d5c9e-3a4b-4c1d-8e2f-7a6b5c4d3e2f";
+  const data = () => {
+    const formData = new FormData();
+    formData.set("id", id);
+    return formData;
+  };
+
+  it("remembers the joined organization before redirecting to it", async () => {
+    acceptInvitation.mockResolvedValue({ ok: true, slug: "acme" });
+    await expect(acceptInvitationAction(data())).rejects.toThrow("redirect:/o/acme");
+    expect(rememberOrganization).toHaveBeenCalledWith("acme");
+  });
+
+  it("goes back to the chooser with the invitation and a failure marker", async () => {
+    acceptInvitation.mockResolvedValue({ ok: false, error: "unknown" });
+    await expect(acceptInvitationAction(data())).rejects.toThrow(
+      `redirect:/app?invitation=${id}&error=unknown`,
+    );
+    expect(rememberOrganization).not.toHaveBeenCalled();
   });
 });

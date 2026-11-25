@@ -9,12 +9,13 @@ export function unique(label: string) {
   return `${label}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
-export async function createUser(label: string) {
+export async function createUser(label: string, name?: string) {
   const email = `${unique(label)}@example.com`;
   const created = await admin.auth.admin.createUser({
     email,
     password: PASSWORD,
     email_confirm: true,
+    user_metadata: name === undefined ? undefined : { name },
   });
   if (created.error) throw created.error;
 

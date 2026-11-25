@@ -23,7 +23,27 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "memberships": {
+            "invitations": {
+                  Row: {
+                    "accepted_at": string | null,"created_at": string,"email": string,"expires_at": string,"id": string,"invited_by": string | null,"invited_by_email": string,"organization_id": string,"role": Database["public"]['Enums']["membership_role"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_at"?: string | null,"created_at"?: string,"email": string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"invited_by_email"?: string,"organization_id": string,"role": Database["public"]['Enums']["membership_role"]
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"created_at"?: string,"email"?: string,"expires_at"?: string,"id"?: string,"invited_by"?: string | null,"invited_by_email"?: string,"organization_id"?: string,"role"?: Database["public"]['Enums']["membership_role"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "invitations_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"memberships": {
                   Row: {
                     "created_at": string,"organization_id": string,"role": Database["public"]['Enums']["membership_role"],"user_id": string
                   }
@@ -63,7 +83,14 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "accept_invitation":
+{ Args: { "invitation_id": string }; Returns: string
+                           },
+"organization_members":
+{ Args: { "organization_id": string }; Returns: {
+              "email": string,"joined_at": string,"name": string,"role": Database["public"]['Enums']["membership_role"],"user_id": string
+            }[]
+                           }
           }
           Enums: {
             "membership_role": "owner"|"admin"|"member"

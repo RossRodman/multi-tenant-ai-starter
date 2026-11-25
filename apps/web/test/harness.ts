@@ -4,6 +4,7 @@ import { hardenCookies } from "../src/server/supabase/cookies";
 import type { SessionCookie } from "../src/server/supabase/cookies";
 import { env } from "./env";
 
+export const NAME = "Test User";
 export const PASSWORD = "correct-horse-battery";
 
 export function first<T>(items: T[]): T {
@@ -81,6 +82,28 @@ export async function findEmails(to: string): Promise<{ id: string; html: string
   );
 }
 
+export async function waitForMessage(to: string, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const summary = await mailpitSearch(to);
+    const latest = summary.at(0);
+    if (latest) {
+      const res = await fetch(`${env.mailpitUrl}/api/v1/message/${latest.ID}`);
+      const message = (await res.json()) as { Subject: string; Text: string; HTML: string };
+      return { subject: message.Subject, text: message.Text, html: message.HTML };
+    }
+    if (Date.now() > deadline) throw new Error(`No email for ${to}`);
+    await new Promise((r) => setTimeout(r, 200));
+  }
+}
+
+async function mailpitSearch(to: string) {
+  const search = await fetch(
+    `${env.mailpitUrl}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}`,
+  );
+  return ((await search.json()) as { messages: MailpitSummary[] }).messages;
+}
+
 export function sessionFromCookies(cookies: { name: string; value: string }[]) {
   const chunks = cookies
     .filter((c) => /^sb-.+-auth-token(\.\d+)?$/.test(c.name))
@@ -105,8 +128,9 @@ export function extractLink(html: string) {
   const url = new URL(href.replaceAll("&amp;", "&"));
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type");
-  if (!tokenHash || !type) throw new Error(`Unexpected link ${href}`);
-  return { url, tokenHash, type };
+  const email = url.searchParams.get("email");
+  if (!tokenHash || !type || !email) throw new Error(`Unexpected link ${href}`);
+  return { url, tokenHash, type, email };
 }
 
 let admin: ReturnType<typeof createSessionlessClient> | undefined;
@@ -116,17 +140,18 @@ export function createAdminClient() {
   return admin;
 }
 
-export async function createUser(label: string) {
+export async function createUser(label: string, name?: string) {
   const email = uniqueEmail(label);
   const created = await createAdminClient().auth.admin.createUser({
     email,
     password: PASSWORD,
     email_confirm: true,
+    user_metadata: name === undefined ? undefined : { name },
   });
   if (created.error) throw created.error;
 
   const { client } = createTestClient();
   const signedIn = await client.auth.signInWithPassword({ email, password: PASSWORD });
   if (signedIn.error) throw signedIn.error;
-  return { id: created.data.user.id, client };
+  return { id: created.data.user.id, email, client };
 }

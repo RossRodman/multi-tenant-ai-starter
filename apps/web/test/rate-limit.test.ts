@@ -56,6 +56,42 @@ describe("createRateLimiter", () => {
   });
 });
 
+describe("take", () => {
+  it("rejects a batch over the remainder without spending anything", () => {
+    const { now } = clock();
+    const limiter = createRateLimiter({ limit: 10, windowMs: 1000, now });
+    expect(limiter.take("k", 4).ok).toBe(true);
+    expect(limiter.take("k", 7).ok).toBe(false);
+    expect(limiter.take("k", 6).ok).toBe(true);
+    expect(limiter.take("k", 1).ok).toBe(false);
+  });
+
+  it("accepts an exact fit", () => {
+    const { now } = clock();
+    const limiter = createRateLimiter({ limit: 10, windowMs: 1000, now });
+    expect(limiter.take("k", 10).ok).toBe(true);
+    expect(limiter.take("k", 1).ok).toBe(false);
+  });
+
+  it("keeps the window start and resets after it", () => {
+    const { state, now } = clock();
+    const limiter = createRateLimiter({ limit: 5, windowMs: 1000, now });
+    limiter.take("k", 5);
+    state.now = 999;
+    expect(limiter.take("k", 1).ok).toBe(false);
+    state.now = 1000;
+    expect(limiter.take("k", 5).ok).toBe(true);
+  });
+
+  it("shares the count with hit", () => {
+    const { now } = clock();
+    const limiter = createRateLimiter({ limit: 3, windowMs: 1000, now });
+    limiter.hit("k");
+    expect(limiter.take("k", 3).ok).toBe(false);
+    expect(limiter.take("k", 2).ok).toBe(true);
+  });
+});
+
 describe("createAuthLimiter", () => {
   it("limits one email from one address", () => {
     const { now } = clock();

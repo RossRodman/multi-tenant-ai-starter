@@ -2,13 +2,16 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #18181b;
-  --primary: #18181b;
+  --foreground: #14171f;
+  --canvas: #f6f6f3;
+  --primary: #4338ca;
   --primary-foreground: #ffffff;
   --muted: #fafafa;
-  --muted-foreground: #71717a;
-  --input: #e4e4e7;
-  --ring: #2563eb;
+  --muted-foreground: #5b6070;
+  --input: #d9d9d2;
+  --accent: #eef0ff;
+  --accent-foreground: #312e81;
+  --ring: #4338ca;
   --destructive: #b91c1c;
   --success-muted: #f0fdf4;
   --success-muted-foreground: #14532d;
@@ -20,12 +23,15 @@
   :root {
     --background: #18181b;
     --foreground: #fafafa;
-    --primary: #fafafa;
-    --primary-foreground: #18181b;
+    --canvas: #111113;
+    --primary: #6358e6;
+    --primary-foreground: #ffffff;
     --muted: #1f1f23;
     --muted-foreground: #a1a1aa;
     --input: #3f3f46;
-    --ring: #60a5fa;
+    --accent: #25234d;
+    --accent-foreground: #c7c4ff;
+    --ring: #a5a1ff;
     --destructive: #f87171;
     --success-muted: #16331f;
     --success-muted-foreground: #dcfce7;
@@ -37,10 +43,13 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);

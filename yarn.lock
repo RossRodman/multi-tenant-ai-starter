@@ -2238,6 +2238,7 @@ __metadata:
     "@repo/db": "workspace:*"
     "@tailwindcss/postcss": "npm:^4.3.5"
     "@types/node": "npm:^24.19.2"
+    "@types/nodemailer": "npm:^8.0.2"
     "@types/pg": "npm:^8.23.1"
     "@types/react": "npm:^19.3.0"
     "@types/react-dom": "npm:^19.3.0"
@@ -2245,6 +2246,7 @@ __metadata:
     clsx: "npm:^2.1.1"
     eslint: "npm:^9.39.5"
     next: "npm:^16.4.6"
+    nodemailer: "npm:^10.6.1"
     pg: "npm:^8.23.1"
     postcss: "npm:^8.5.33"
     radix-ui: "npm:^1.8.1"
@@ -2806,6 +2808,15 @@ __metadata:
   dependencies:
     undici-types: "npm:>=7.24.0 <7.24.7"
   checksum: 10c0/b51a7f8854007ad579dffdd0633d8addbfeb2c97cceb380f2eba0ed163638ec52e17565385a6cc04d54ac4ff99c70c64aee68a4ca45b6128c035e828794e29c5
+  languageName: node
+  linkType: hard
+
+"@types/nodemailer@npm:^8.0.2":
+  version: 8.0.2
+  resolution: "@types/nodemailer@npm:8.0.2"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/1ad3f83ac130cf9af65ce9eb7985b08b27b4723316c2be621522effc31c63d7d2d76880815490499fbe8b1aff3da889d24b54b3db892526d1166b12702404ff0
   languageName: node
   linkType: hard
 
@@ -5457,6 +5468,13 @@ __metadata:
   version: 2.0.65
   resolution: "node-releases@npm:2.0.65"
   checksum: 10c0/80a1f49172b1ac7abee612e4ff4fd707763478a8ea0ffb38f428a925622b6bfe320a1103b30d76ae37df3a2544ada7a63c74ca578b19cc332298960bf4c826c4
+  languageName: node
+  linkType: hard
+
+"nodemailer@npm:^10.6.1":
+  version: 10.6.1
+  resolution: "nodemailer@npm:10.6.1"
+  checksum: 10c0/a050116bf03e84cfd1d391ae010f8f5067c8caaab9e908bbf7e3b2de49e7d6471fa739c8a126c3ea57fa927c962c7533848d22df0641f3b7c64ec2c5f888ae92
   languageName: node
   linkType: hard
 

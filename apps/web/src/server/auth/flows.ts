@@ -19,9 +19,9 @@ function result(error: RawAuthError | null, tolerated: string[] = []): AuthResul
 
 export async function signUp(
   client: Client,
-  { email, password }: { email: string; password: string },
+  { email, password, name }: { email: string; password: string; name: string },
 ): Promise<AuthResult> {
-  const { error } = await client.auth.signUp({ email, password });
+  const { error } = await client.auth.signUp({ email, password, options: { data: { name } } });
   return result(error, ["email_exists", "user_already_exists", EMAIL_SEND_LIMIT]);
 }
 
@@ -53,10 +53,17 @@ export async function requestPasswordReset(client: Client, email: string): Promi
 
 export async function verifyEmailLink(
   client: Client,
-  { tokenHash, type }: EmailLink,
+  { tokenHash, type, email }: EmailLink,
 ): Promise<AuthResult> {
   const { error } = await client.auth.verifyOtp({ token_hash: tokenHash, type });
-  return result(error);
+  if (error) return result(error);
+
+  const user = await getSessionUser(client);
+  if (user?.email?.toLowerCase() !== email) {
+    await signOut(client);
+    return { ok: false, error: "invalid_link" };
+  }
+  return OK;
 }
 
 export async function exchangeOAuthCode(client: Client, code: string): Promise<AuthResult> {

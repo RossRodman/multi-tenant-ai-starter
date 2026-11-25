@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-const alertVariants = cva("flex gap-2 rounded-md px-3 py-2.5 text-sm", {
+const alertVariants = cva("flex gap-2 rounded-lg px-3 py-2.5 text-sm", {
   variants: {
     variant: {
       success: "bg-success-muted text-success-muted-foreground",

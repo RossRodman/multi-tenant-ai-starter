@@ -6,4 +6,4 @@ export { createServerClient } from "./server";
 export type { ServerClientOptions } from "./server";
 export { createSessionlessClient } from "./sessionless";
 export type { SessionlessClientOptions } from "./sessionless";
-export type { Membership, MembershipRole, Organization } from "./types";
+export type { Invitation, Membership, MembershipRole, Organization } from "./types";
