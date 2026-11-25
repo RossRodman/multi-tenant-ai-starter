@@ -9,6 +9,9 @@ export interface OrganizationFormState {
   values?: { name: string; slug: string };
 }
 
+export const ACCEPT_ERROR_PARAM = "error";
+export const ACCEPT_ERROR_UNKNOWN = "unknown";
+
 export const initialState: OrganizationFormState = {};
 
 export const errorMessages: Record<OrganizationFormError, string> = {

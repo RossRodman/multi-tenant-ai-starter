@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { flushSync } from "react-dom";
 
+import { OnboardingCard } from "@/components/onboarding-card";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,9 +36,8 @@ export function CreateOrganizationForm({ title }: { title: string }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-input bg-background shadow-sm">
-      <h1 className="border-b border-input px-6 py-6 text-center text-xl font-semibold">{title}</h1>
-      <form action={action} className="flex flex-col gap-5 bg-muted px-6 py-6">
+    <OnboardingCard title={title}>
+      <form action={action} className="flex flex-col gap-5">
         <Field
           label="Name"
           name="name"
@@ -88,11 +88,13 @@ export function CreateOrganizationForm({ title }: { title: string }) {
             <p id="slug-error" className="text-sm text-destructive">
               {slugError}
             </p>
-          ) : null}
+          ) : (
+            <p className="text-sm text-muted-foreground">Lowercase letters, numbers and dashes</p>
+          )}
         </div>
         {state.error ? <Alert variant="destructive">{errorMessages[state.error]}</Alert> : null}
         <SubmitButton pendingLabel="Creating...">Create organization</SubmitButton>
       </form>
-    </div>
+    </OnboardingCard>
   );
 }

@@ -1,20 +1,19 @@
 "use server";
 
+import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
-import { createOrganization } from "@/server/organizations";
+import { text } from "@/lib/form";
+import { acceptInvitation } from "@/server/invitations";
+import { createOrganization, rememberOrganization } from "@/server/organizations";
 import { orgCreateLimiter } from "@/server/rate-limit";
 import { requireUser } from "@/server/session";
 import { getSupabase } from "@/server/supabase/client";
 
-import { fieldMessages } from "./form-state";
+import { ACCEPT_ERROR_PARAM, ACCEPT_ERROR_UNKNOWN, fieldMessages } from "./form-state";
 import type { OrganizationFormState } from "./form-state";
-
-function text(formData: FormData, name: string) {
-  const value = formData.get(name);
-  return typeof value === "string" ? value : "";
-}
 
 export async function createOrganizationAction(
   _prev: OrganizationFormState,
@@ -27,7 +26,7 @@ export async function createOrganizationAction(
   const result = await createOrganization(await getSupabase(), values);
   if (result.ok) {
     revalidatePath("/app");
-    redirect("/app");
+    redirect(`/app/new/${result.slug}` as Route);
   }
 
   switch (result.error) {
@@ -39,4 +38,20 @@ export async function createOrganizationAction(
     case "unknown":
       return { error: "unknown", values };
   }
+}
+
+export async function acceptInvitationAction(formData: FormData): Promise<void> {
+  await requireUser();
+  const id = z.uuid().safeParse(text(formData, "id"));
+  if (!id.success) redirect("/app");
+
+  const result = await acceptInvitation(await getSupabase(), id.data);
+  if (result.ok) {
+    revalidatePath("/app");
+    await rememberOrganization(result.slug);
+    redirect(`/o/${result.slug}` as Route);
+  }
+  const params = new URLSearchParams({ invitation: id.data });
+  if (result.error === "unknown") params.set(ACCEPT_ERROR_PARAM, ACCEPT_ERROR_UNKNOWN);
+  redirect(`/app?${params.toString()}` as Route);
 }
