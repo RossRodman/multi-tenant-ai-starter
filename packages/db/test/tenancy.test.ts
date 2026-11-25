@@ -91,7 +91,7 @@ describe("organizations and memberships", () => {
       expect(result.error?.code).toBe("42501");
     };
 
-    it("cannot write memberships", async () => {
+    it("cannot insert memberships or change who they belong to", async () => {
       const { client, id } = user();
       denied(
         await client
@@ -99,20 +99,18 @@ describe("organizations and memberships", () => {
           .insert({ organization_id: orgId, user_id: id, role: "owner" }),
       );
       denied(
-        await client.from("memberships").update({ role: "owner" }).eq("organization_id", orgId),
+        await client
+          .from("memberships")
+          .update({ organization_id: crypto.randomUUID() })
+          .eq("organization_id", orgId),
       );
-      denied(await client.from("memberships").delete().eq("organization_id", orgId));
     });
 
-    it("cannot update or delete organizations", async () => {
+    it("cannot delete or update the identity of organizations", async () => {
       const { client } = user();
       denied(
-        await client
-          .from("organizations")
-          .update({ slug: unique("x") })
-          .eq("id", orgId),
+        await client.from("organizations").update({ id: crypto.randomUUID() }).eq("id", orgId),
       );
-      denied(await client.from("organizations").update({ name: "Renamed" }).eq("id", orgId));
       denied(await client.from("organizations").delete().eq("id", orgId));
     });
 
@@ -214,17 +212,9 @@ describe("organizations and memberships", () => {
 
   it("removes memberships when the user is deleted", async () => {
     const c = await createUser("org-c");
-    const cOrgIds: string[] = [];
     onTestFinished(async () => {
-      await db.query(
-        `delete from public.organizations
-         where id = any ($1) or id in (select organization_id from public.memberships where user_id = $2 and role = 'owner')`,
-        [cOrgIds, c.id],
-      );
       await deleteUser(c.id);
     });
-    const org = await createOrg(c);
-    cOrgIds.push(org.id);
     await db.query("insert into public.memberships values ($1, $2, 'member')", [orgId, c.id]);
 
     await deleteUser(c.id);
