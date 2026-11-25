@@ -4,7 +4,17 @@ import { parseServerEnv } from "../src/server/env";
 
 const DEMO_KEY = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
 
-const mail = { SMTP_URL: "smtps://smtp.example.com:465", MAIL_FROM: "no-reply@example.com" };
+const billing = {
+  SUPABASE_SECRET_KEY: "sb_secret_hosted",
+  STRIPE_SECRET_KEY: "sk_test_abc",
+  STRIPE_WEBHOOK_SECRET: "whsec_abc",
+};
+
+const mail = {
+  SMTP_URL: "smtps://smtp.example.com:465",
+  MAIL_FROM: "no-reply@example.com",
+  ...billing,
+};
 
 const local = {
   NEXT_PUBLIC_APP_URL: "http://localhost:3000",
@@ -140,6 +150,70 @@ describe("mail settings", () => {
   ])("reject MAIL_FROM=%j", (value) => {
     expect(() => parseServerEnv({ ...local, MAIL_FROM: value }, "development")).toThrow(
       /MAIL_FROM/,
+    );
+  });
+});
+
+describe("billing settings", () => {
+  it("may be missing outside production", () => {
+    expect(parseServerEnv(local, "development")).toMatchObject({
+      supabaseSecretKey: undefined,
+      stripeSecretKey: undefined,
+      stripeWebhookSecret: undefined,
+    });
+  });
+
+  it("treat blank values as missing outside production", () => {
+    const env = parseServerEnv(
+      { ...local, SUPABASE_SECRET_KEY: "", STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "" },
+      "development",
+    );
+    expect(env.stripeSecretKey).toBeUndefined();
+  });
+
+  it("are required in production", () => {
+    expect(() =>
+      parseServerEnv(
+        {
+          ...hosted,
+          SUPABASE_SECRET_KEY: undefined,
+          STRIPE_SECRET_KEY: undefined,
+          STRIPE_WEBHOOK_SECRET: undefined,
+        },
+        "production",
+      ),
+    ).toThrow(/SUPABASE_SECRET_KEY.*STRIPE_SECRET_KEY.*STRIPE_WEBHOOK_SECRET/s);
+  });
+
+  it("are read when present", () => {
+    expect(parseServerEnv({ ...local, ...billing }, "development")).toMatchObject({
+      supabaseSecretKey: "sb_secret_hosted",
+      stripeSecretKey: "sk_test_abc",
+      stripeWebhookSecret: "whsec_abc",
+    });
+  });
+
+  it("reject a live key outside production", () => {
+    expect(() =>
+      parseServerEnv({ ...local, STRIPE_SECRET_KEY: "sk_live_abc" }, "development"),
+    ).toThrow(/live Stripe key/);
+    expect(() =>
+      parseServerEnv({ ...hosted, STRIPE_SECRET_KEY: "sk_live_abc" }, "production"),
+    ).not.toThrow();
+  });
+
+  it.each(["pk_test_abc", "rk_test_abc", "sk_abc", "not a key"])(
+    "reject STRIPE_SECRET_KEY=%j",
+    (value) => {
+      expect(() => parseServerEnv({ ...local, STRIPE_SECRET_KEY: value }, "development")).toThrow(
+        /STRIPE_SECRET_KEY/,
+      );
+    },
+  );
+
+  it("reject a webhook secret without the whsec_ prefix", () => {
+    expect(() => parseServerEnv({ ...local, STRIPE_WEBHOOK_SECRET: "abc" }, "development")).toThrow(
+      /STRIPE_WEBHOOK_SECRET/,
     );
   });
 });

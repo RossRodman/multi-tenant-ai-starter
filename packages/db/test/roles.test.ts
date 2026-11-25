@@ -31,6 +31,10 @@ async function createOrg(creator: User) {
   const id = rows[0]?.id;
   if (!id) throw new Error("organization not created");
   orgIds.push(id);
+  await db.query(
+    "insert into public.subscriptions (id, organization_id, plan, interval, status) values ($1, $2, 'team', 'month', 'active')",
+    [`sub_${id}`, id],
+  );
   return { id, slug };
 }
 

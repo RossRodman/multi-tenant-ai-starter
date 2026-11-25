@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 
 import { memberCountLabel } from "@/lib/format";
 import { roleLabel } from "@/lib/roles";
+import { PLANS } from "@repo/billing/plans";
+
+import { getBilling } from "@/server/billing";
 import { listMembers } from "@/server/members";
 import { currentOrganization } from "@/server/organizations";
 import { requireUser } from "@/server/session";
@@ -14,7 +17,10 @@ export default async function OverviewPage({ params }: { params: Promise<{ slug:
   const client = await getSupabase();
   const organization = await currentOrganization(user.id, (await params).slug);
   if (!organization) notFound();
-  const members = await listMembers(client, organization.id);
+  const [members, { plan }] = await Promise.all([
+    listMembers(client, organization.id),
+    getBilling(client, organization.id),
+  ]);
 
   return (
     <div className="flex max-w-2xl flex-col gap-2">
@@ -22,7 +28,8 @@ export default async function OverviewPage({ params }: { params: Promise<{ slug:
         {organization.name}
       </h1>
       <p className="text-muted-foreground">
-        You are {roleLabel(organization.role)} · {memberCountLabel(members.length)}
+        You are {roleLabel(organization.role)} · {memberCountLabel(members.length)} ·{" "}
+        {PLANS[plan].name} plan
       </p>
       <Link
         href={`/o/${organization.slug}/members` as Route}

@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 
 import { canManage } from "@/lib/roles";
+import { getBilling } from "@/server/billing";
 import { currentOrganization } from "@/server/organizations";
 import { requireUser } from "@/server/session";
+import { getSupabase } from "@/server/supabase/client";
 
 import { TeamStep } from "./team-step";
 
@@ -11,5 +13,6 @@ export default async function TeamStepPage({ params }: { params: Promise<{ slug:
   const organization = await currentOrganization(user.id, (await params).slug);
   if (!organization || !canManage(organization.role)) notFound();
 
-  return <TeamStep slug={organization.slug} viewerRole={organization.role} />;
+  const { seats } = await getBilling(await getSupabase(), organization.id);
+  return <TeamStep slug={organization.slug} viewerRole={organization.role} seats={seats} />;
 }

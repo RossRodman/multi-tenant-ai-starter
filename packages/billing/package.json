@@ -1,0 +1,32 @@
+{
+  "name": "@repo/billing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./plans": "./src/plans.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "stripe:seed": "tsx src/seed-cli.ts"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "stripe": "^23.2.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "eslint": "^9.39.5",
+    "pg": "^8.23.1",
+    "tsx": "^4.20.6",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  }
+}

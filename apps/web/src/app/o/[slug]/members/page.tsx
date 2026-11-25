@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import { assignableRoles, canManage, canManageRole, roleLabel } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { seatsLeftLabel } from "@/lib/billing";
+import { getBilling } from "@/server/billing";
 import { listPendingInvitations } from "@/server/invitations";
 import { listMembers } from "@/server/members";
 import { currentOrganization } from "@/server/organizations";
@@ -93,10 +95,13 @@ export default async function MembersPage({
   const { status, tab: tabParam } = await searchParams;
   const canInvite = canManage(organization.role);
   const tab = canInvite && tabParam === "invitations" ? "invitations" : "members";
-  const [members, pending] = await Promise.all([
+  const [members, pending, billing] = await Promise.all([
     listMembers(client, organization.id),
     canInvite ? listPendingInvitations(client, organization.id) : [],
+    canInvite ? getBilling(client, organization.id) : null,
   ]);
+  const seats = billing?.seats;
+  const overLimit = seats?.limit != null && members.length > seats.limit;
   const assignable = assignableRoles(organization.role);
   const notice = isMemberStatus(status) ? memberStatusMessages[status] : null;
   const tabClass = "flex min-h-11 items-center border-b-2 px-1 text-[15px]";
@@ -116,6 +121,12 @@ export default async function MembersPage({
         ) : null}
       </div>
       {notice ? <Alert variant={notice.variant}>{notice.text}</Alert> : null}
+      {overLimit ? (
+        <Alert variant="destructive">
+          {String(members.length)} of {String(seats.limit)} seats used. Remove members or upgrade to
+          invite more.
+        </Alert>
+      ) : null}
 
       <div className="flex flex-wrap items-start gap-4">
         <div className="flex min-w-0 flex-[2_1_32rem] flex-col gap-4">
@@ -295,8 +306,37 @@ export default async function MembersPage({
           ) : null}
         </div>
 
-        {canInvite ? (
+        {canInvite && seats ? (
           <div className="flex min-w-0 flex-[1_1_22rem] flex-col gap-4">
+            <section
+              id="seats"
+              className={cn(CARD, "flex flex-col gap-3 p-6")}
+              aria-labelledby="seats-heading"
+            >
+              <h2 id="seats-heading" className="text-base font-bold">
+                Seats
+              </h2>
+              <p className="text-[1.625rem] leading-tight font-bold tracking-tight">
+                {seats.limit === null
+                  ? `${String(seats.used)} used`
+                  : `${String(seats.used)} of ${String(seats.limit)}`}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {seats.limit === null
+                  ? "Unlimited seats on this plan."
+                  : `${seatsLeftLabel(Math.max(seats.limit - seats.used, 0))}, ${String(seats.pending)} ${seats.pending === 1 ? "invitation" : "invitations"} pending.`}{" "}
+                {organization.role === "owner" ? (
+                  <Link
+                    href={`/o/${organization.slug}/billing` as Route}
+                    className="text-ring underline-offset-4 hover:underline"
+                  >
+                    Add seats in Billing.
+                  </Link>
+                ) : (
+                  "Only owners can change the plan."
+                )}
+              </p>
+            </section>
             <section
               id="invite"
               className={cn(CARD, "flex flex-col gap-4 p-6")}
@@ -305,7 +345,7 @@ export default async function MembersPage({
               <h2 id="invite-heading" className="text-base font-bold">
                 Invite people
               </h2>
-              <InviteForm slug={organization.slug} viewerRole={organization.role} />
+              <InviteForm slug={organization.slug} viewerRole={organization.role} seats={seats} />
             </section>
           </div>
         ) : null}

@@ -42,6 +42,7 @@ const RESEND_STATUS: Partial<Record<InviteResult, MemberStatus>> = {
   sent: "resent",
   not_sent: "not_sent",
   already_member: "already_member",
+  seat_limit: "seat_limit",
   forbidden: "forbidden",
 };
 
