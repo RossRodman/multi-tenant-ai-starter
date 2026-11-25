@@ -12,7 +12,12 @@ import { orgCreateLimiter } from "@/server/rate-limit";
 import { requireUser } from "@/server/session";
 import { getSupabase } from "@/server/supabase/client";
 
-import { ACCEPT_ERROR_PARAM, ACCEPT_ERROR_UNKNOWN, fieldMessages } from "./form-state";
+import {
+  ACCEPT_ERROR_PARAM,
+  ACCEPT_ERROR_SEAT_LIMIT,
+  ACCEPT_ERROR_UNKNOWN,
+  fieldMessages,
+} from "./form-state";
 import type { OrganizationFormState } from "./form-state";
 
 export async function createOrganizationAction(
@@ -53,5 +58,6 @@ export async function acceptInvitationAction(formData: FormData): Promise<void> 
   }
   const params = new URLSearchParams({ invitation: id.data });
   if (result.error === "unknown") params.set(ACCEPT_ERROR_PARAM, ACCEPT_ERROR_UNKNOWN);
+  if (result.error === "seat_limit") params.set(ACCEPT_ERROR_PARAM, ACCEPT_ERROR_SEAT_LIMIT);
   redirect(`/app?${params.toString()}` as Route);
 }

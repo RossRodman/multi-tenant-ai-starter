@@ -9,10 +9,10 @@ import { emailSchema } from "../auth";
 import { getServerEnv } from "../env";
 import { invitationEmail, invitationUrl, sendMail } from "../mail";
 import { listMembers } from "../members";
-import { INSUFFICIENT_PRIVILEGE, UNIQUE_VIOLATION } from "../pg-errors";
+import { INSUFFICIENT_PRIVILEGE, SEAT_LIMIT_REACHED, UNIQUE_VIOLATION } from "../pg-errors";
 
 export type InviteResult =
-  "sent" | "not_sent" | "invalid_email" | "already_member" | "forbidden" | "unknown";
+  "sent" | "not_sent" | "invalid_email" | "already_member" | "seat_limit" | "forbidden" | "unknown";
 
 interface Created {
   id: string;
@@ -47,6 +47,7 @@ async function createInvitation(
 
   const { data, error } = attempt;
   if (error?.code === UNIQUE_VIOLATION) return { result: "sent" };
+  if (error?.code === SEAT_LIMIT_REACHED) return { result: "seat_limit" };
   if (error) {
     if (error.code === INSUFFICIENT_PRIVILEGE) return { result: "forbidden" };
     console.error("Unexpected invitation error", { code: error.code, message: error.message });

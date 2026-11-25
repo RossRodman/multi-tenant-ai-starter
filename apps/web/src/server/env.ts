@@ -23,10 +23,29 @@ const mailFrom = z.string().refine((value) => MAIL_FROM_PATTERN.test(value.trim(
 
 const smtpUrl = z.url({ protocol: /^smtps?$/ });
 
+const optionalSecret = (schema: z.ZodType<string>) =>
+  z.preprocess((value) => (value === "" ? undefined : value), schema.optional());
+
+const stripeSecretKey = z.string().regex(/^sk_(test|live)_\S+$/, {
+  error: "must be a Stripe secret key (sk_test_ or sk_live_)",
+});
+const stripeWebhookSecret = z.string().regex(/^whsec_\S+$/, {
+  error: "must be a Stripe webhook signing secret (whsec_)",
+});
+
 const buildSchema = (production: boolean) =>
   z.object({
     SMTP_URL: production ? smtpUrl : smtpUrl.default(DEV_SMTP_URL),
     MAIL_FROM: production ? mailFrom : mailFrom.default(DEV_MAIL_FROM),
+    SUPABASE_SECRET_KEY: production ? z.string().min(1) : optionalSecret(z.string().min(1)),
+    STRIPE_SECRET_KEY: production
+      ? stripeSecretKey
+      : optionalSecret(
+          stripeSecretKey.refine((key) => !key.startsWith("sk_live_"), {
+            error: "a live Stripe key is only accepted in production",
+          }),
+        ),
+    STRIPE_WEBHOOK_SECRET: production ? stripeWebhookSecret : optionalSecret(stripeWebhookSecret),
     NEXT_PUBLIC_APP_URL: publicValue(z.url()),
     NEXT_PUBLIC_SUPABASE_URL: publicValue(z.url()),
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publicValue(z.string().min(1)),
@@ -49,6 +68,9 @@ export interface ServerEnv {
   trustedProxyHops: number;
   smtpUrl: string;
   mailFrom: string;
+  supabaseSecretKey: string | undefined;
+  stripeSecretKey: string | undefined;
+  stripeWebhookSecret: string | undefined;
 }
 
 const isLoopback = (url: string) => LOOPBACK_HOSTS.has(new URL(url).hostname);
@@ -87,8 +109,16 @@ export function parseServerEnv(
     trustedProxyHops: env.TRUSTED_PROXY_HOPS,
     smtpUrl: env.SMTP_URL,
     mailFrom: env.MAIL_FROM.trim(),
+    supabaseSecretKey: env.SUPABASE_SECRET_KEY,
+    stripeSecretKey: env.STRIPE_SECRET_KEY,
+    stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET,
   };
 }
+
+export const billingConfigured = (env: ServerEnv) =>
+  env.supabaseSecretKey !== undefined &&
+  env.stripeSecretKey !== undefined &&
+  env.stripeWebhookSecret !== undefined;
 
 let cached: ServerEnv | undefined;
 
@@ -102,6 +132,9 @@ export function getServerEnv(): ServerEnv {
       TRUSTED_PROXY_HOPS: process.env.TRUSTED_PROXY_HOPS,
       SMTP_URL: process.env.SMTP_URL,
       MAIL_FROM: process.env.MAIL_FROM,
+      SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
+      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+      STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     },
     process.env.NODE_ENV,
   );

@@ -32,6 +32,12 @@ const icons = {
       <path d="M2.5 17c0-3 2.5-5 5.5-5s5.5 2 5.5 5M13 4.5a3 3 0 010 5.5M15 12.3c1.6.7 2.6 2.3 2.6 4.7" />
     </>
   ),
+  billing: (
+    <>
+      <rect x="2.5" y="4.5" width="15" height="11" rx="2" />
+      <path d="M2.5 8.5h15M5.5 12.5h3" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="10" cy="10" r="2.6" />
@@ -47,7 +53,10 @@ export function NavLinks({ slug, showSettings }: { slug: string; showSettings: b
     { href: base, label: "Overview", icon: icons.overview },
     { href: `${base}/members`, label: "Members", icon: icons.members },
     ...(showSettings
-      ? [{ href: `${base}/settings`, label: "Settings", icon: icons.settings }]
+      ? [
+          { href: `${base}/billing`, label: "Billing", icon: icons.billing },
+          { href: `${base}/settings`, label: "Settings", icon: icons.settings },
+        ]
       : []),
   ];
 

@@ -17,6 +17,9 @@
   --success-muted-foreground: #14532d;
   --destructive-muted: #fef2f2;
   --destructive-muted-foreground: #991b1b;
+  --destructive-border: #fca5a5;
+  --warning-muted: #fff1d6;
+  --warning-muted-foreground: #5c3a00;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,6 +40,9 @@
     --success-muted-foreground: #dcfce7;
     --destructive-muted: #511d1f;
     --destructive-muted-foreground: #fecaca;
+    --destructive-border: #7f1d1d;
+    --warning-muted: #3d2d0a;
+    --warning-muted-foreground: #fde7b0;
   }
 }
 
@@ -57,6 +63,9 @@
   --color-success-muted-foreground: var(--success-muted-foreground);
   --color-destructive-muted: var(--destructive-muted);
   --color-destructive-muted-foreground: var(--destructive-muted-foreground);
+  --color-destructive-border: var(--destructive-border);
+  --color-warning-muted: var(--warning-muted);
+  --color-warning-muted-foreground: var(--warning-muted-foreground);
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }

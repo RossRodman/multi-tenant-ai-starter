@@ -17,7 +17,12 @@ import { requireUser } from "@/server/session";
 import { getSupabase } from "@/server/supabase/client";
 
 import { acceptInvitationAction } from "./actions";
-import { ACCEPT_ERROR_PARAM, ACCEPT_ERROR_UNKNOWN, errorMessages } from "./form-state";
+import {
+  ACCEPT_ERROR_PARAM,
+  ACCEPT_ERROR_SEAT_LIMIT,
+  ACCEPT_ERROR_UNKNOWN,
+  errorMessages,
+} from "./form-state";
 
 export default async function AppHomePage({
   searchParams,
@@ -45,8 +50,13 @@ export default async function AppHomePage({
   if (destination.kind === "create") redirect("/app/new");
 
   const failed = params[ACCEPT_ERROR_PARAM] === ACCEPT_ERROR_UNKNOWN;
+  const full = params[ACCEPT_ERROR_PARAM] === ACCEPT_ERROR_SEAT_LIMIT;
+  const fullInvitation = full ? invitations.find(({ id }) => id === invitationParam) : undefined;
   const unavailable =
-    !failed && invitationParam && !invitations.some(({ id }) => id === invitationParam);
+    !failed &&
+    !fullInvitation &&
+    invitationParam &&
+    !invitations.some(({ id }) => id === invitationParam);
 
   return (
     <OnboardingCard
@@ -55,6 +65,11 @@ export default async function AppHomePage({
     >
       <div className="flex flex-col gap-5">
         {failed ? <Alert variant="destructive">{errorMessages.unknown}</Alert> : null}
+        {fullInvitation ? (
+          <Alert variant="destructive">
+            {fullInvitation.organization.name} has no free seats. Ask an owner to upgrade.
+          </Alert>
+        ) : null}
         {unavailable ? (
           <Alert variant="destructive">
             This invitation is not available for {user.email}. It may have been accepted, expired,

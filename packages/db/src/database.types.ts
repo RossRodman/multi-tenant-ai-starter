@@ -77,6 +77,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"subscriptions": {
+                  Row: {
+                    "cancel_at_period_end": boolean,"canceled_at": string | null,"created_at": string,"current_period_end": string | null,"id": string,"interval": string,"organization_id": string,"plan": string,"status": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cancel_at_period_end"?: boolean,"canceled_at"?: string | null,"created_at"?: string,"current_period_end"?: string | null,"id": string,"interval": string,"organization_id": string,"plan": string,"status": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "cancel_at_period_end"?: boolean,"canceled_at"?: string | null,"created_at"?: string,"current_period_end"?: string | null,"id"?: string,"interval"?: string,"organization_id"?: string,"plan"?: string,"status"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "subscriptions_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -86,10 +106,22 @@ isOneToOne: false
             "accept_invitation":
 { Args: { "invitation_id": string }; Returns: string
                            },
+"billing_customer_for_organization":
+{ Args: { "organization_id": string }; Returns: string
+                           },
+"billing_organization_for_customer":
+{ Args: { "stripe_customer_id": string }; Returns: string
+                           },
+"link_billing_customer":
+{ Args: { "organization_id": string,"stripe_customer_id": string }; Returns: string
+                           },
 "organization_members":
 { Args: { "organization_id": string }; Returns: {
               "email": string,"joined_at": string,"name": string,"role": Database["public"]['Enums']["membership_role"],"user_id": string
             }[]
+                           },
+"sync_subscription":
+{ Args: { "fetched_at": string,"subscription": Json }; Returns: boolean
                            }
           }
           Enums: {

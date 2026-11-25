@@ -31,7 +31,7 @@ async function newUser(label: string) {
   return user;
 }
 
-async function setup(name = "Acme") {
+async function setup(name = "Acme", plan: "free" | "team" = "team") {
   const [owner, admin] = await Promise.all([newUser("inv-owner"), newUser("inv-admin")]);
   const slug = `invite-${crypto.randomUUID().slice(0, 8)}`;
   await createOrganization(owner.client, { name, slug });
@@ -42,6 +42,12 @@ async function setup(name = "Acme") {
   const id = rows[0]?.id ?? "";
   orgIds.push(id);
   await db.query("insert into public.memberships values ($1, $2, 'admin')", [id, admin.id]);
+  if (plan === "team") {
+    await db.query(
+      "insert into public.subscriptions (id, organization_id, plan, interval, status) values ($1, $2, 'team', 'month', 'active')",
+      [`sub_${id}`, id],
+    );
+  }
   return { owner, admin, organization: { id, name, slug } };
 }
 
@@ -237,5 +243,54 @@ describe("invitation lifecycle", () => {
       await revokeInvitation(owner.client, other.organization.id, invitation?.id ?? ""),
     ).toEqual({ ok: false, error: "forbidden" });
     expect(await listPendingInvitations(owner.client, organization.id)).toHaveLength(1);
+  });
+});
+
+describe("seat limit", () => {
+  it("reports seat_limit for rows that do not fit and keeps the ones that do", async () => {
+    const { owner, organization } = await setup("Acme", "free");
+    const [first, second, third] = [uniqueEmail("a"), uniqueEmail("b"), uniqueEmail("c")];
+
+    const results = await inviteMembers(owner.client, organization, { email: owner.email }, [
+      { email: first, role: "member" },
+      { email: second, role: "member" },
+      { email: third, role: "member" },
+    ]);
+
+    expect(results.map(({ result }) => result)).toEqual(["sent", "seat_limit", "seat_limit"]);
+    expect(await listPendingInvitations(owner.client, organization.id)).toHaveLength(1);
+  });
+
+  it("lets a pending invitation be sent again when the organization is full", async () => {
+    const { owner, organization } = await setup("Acme", "free");
+    const email = uniqueEmail("again");
+    await inviteMembers(owner.client, organization, { email: owner.email }, [
+      { email, role: "member" },
+    ]);
+
+    const [again] = await inviteMembers(owner.client, organization, { email: owner.email }, [
+      { email, role: "member" },
+    ]);
+
+    expect(again?.result).toBe("sent");
+  });
+
+  it("fails an accept with seat_limit when the members fill the plan", async () => {
+    const { owner, organization } = await setup("Acme", "free");
+    const invitee = await newUser("inv-full");
+    await inviteMembers(owner.client, organization, { email: owner.email }, [
+      { email: invitee.email, role: "member" },
+    ]);
+    const filler = await newUser("inv-filler");
+    await db.query("insert into public.memberships values ($1, $2, 'member')", [
+      organization.id,
+      filler.id,
+    ]);
+    const id = (await listMyInvitations(invitee.client, invitee.email))[0]?.id ?? "";
+
+    expect(await acceptInvitation(invitee.client, id)).toEqual({
+      ok: false,
+      error: "seat_limit",
+    });
   });
 });

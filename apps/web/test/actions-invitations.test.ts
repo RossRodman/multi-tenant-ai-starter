@@ -169,6 +169,14 @@ describe("resendInvitationAction statuses", () => {
     data.set("id", crypto.randomUUID());
     await expect(resendInvitationAction(data)).rejects.toThrow("status=already_member");
   });
+
+  it("reports a full organization as seat_limit", async () => {
+    resendInvitation.mockResolvedValue("seat_limit");
+    const data = new FormData();
+    data.set("slug", "acme");
+    data.set("id", crypto.randomUUID());
+    await expect(resendInvitationAction(data)).rejects.toThrow("status=seat_limit");
+  });
 });
 
 describe("inviteMembersAction submissions", () => {

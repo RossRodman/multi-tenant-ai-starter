@@ -11,6 +11,7 @@ export interface OrganizationFormState {
 
 export const ACCEPT_ERROR_PARAM = "error";
 export const ACCEPT_ERROR_UNKNOWN = "unknown";
+export const ACCEPT_ERROR_SEAT_LIMIT = "seat_limit";
 
 export const initialState: OrganizationFormState = {};
 

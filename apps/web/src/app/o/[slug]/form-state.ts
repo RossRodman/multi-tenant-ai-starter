@@ -30,6 +30,7 @@ export const inviteResultLabels: Record<InviteResult, string> = {
   not_sent: "Not sent. Resend it from Members.",
   invalid_email: "Invalid email",
   already_member: "Already a member",
+  seat_limit: "No free seats",
   forbidden: "Not allowed",
   unknown: "Something went wrong",
 };
@@ -65,7 +66,8 @@ export type MemberStatus =
   | "not_sent"
   | "already_member"
   | "revoked"
-  | "rate_limited";
+  | "rate_limited"
+  | "seat_limit";
 
 export const memberStatusMessages: Record<
   MemberStatus,
@@ -82,6 +84,7 @@ export const memberStatusMessages: Record<
   already_member: { text: "This person is already a member.", variant: "destructive" },
   revoked: { text: "Invitation revoked.", variant: "success" },
   rate_limited: { text: "Too many invitations. Try again later.", variant: "destructive" },
+  seat_limit: { text: "No free seats. Upgrade to invite more.", variant: "destructive" },
 };
 
 export function isMemberStatus(value: string | undefined): value is MemberStatus {

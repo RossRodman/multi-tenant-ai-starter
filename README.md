@@ -9,11 +9,10 @@ apps/
   web/            Next.js application (UI in src/app, backend code in src/server)
 packages/
   config/         Shared TypeScript and ESLint configuration
+  billing/        Plans config, Stripe sync, Checkout, Customer Portal and webhook handling
   db/             Typed Supabase client factories and generated database types
 supabase/         Local stack configuration and SQL migrations
 ```
-
-Planned additions: `packages/billing`, `packages/ai` and `apps/e2e`.
 
 ## Getting started
 
@@ -78,6 +77,24 @@ The `Push migrations` workflow does the same from GitHub Actions and runs on man
 
 Set Deployment branches of the `hosted` environment to `main` and `dev`. That is the actual control: `workflow_dispatch` runs the workflow file from the chosen branch, so the branch check in the workflow can be edited away on any branch, while an environment branch rule withholds the secrets. The workflow also refuses any other branch. Local `yarn db:push` pushes the migrations of the current checkout, so run it only from an up-to-date `main` or `dev`.
 
+## Billing
+
+Plans, prices and limits live in `packages/billing/src/plans.ts`. Stripe is the source of truth: the webhook mirrors each subscription into `public.subscriptions`, and an organization without a paying subscription is on Free.
+
+1. Put a test-mode key in `.env` as `STRIPE_SECRET_KEY`, and the service key of the local stack as `SUPABASE_SECRET_KEY` (`yarn db:env` prints it).
+2. Run `yarn stripe:seed`. It creates the products, the four prices (found later by their lookup keys) and the Customer Portal configuration, and can be run again safely. A live key is refused unless you pass `--live`.
+3. Forward events to the app and copy the signing secret it prints into `STRIPE_WEBHOOK_SECRET`:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+On a hosted deployment, add an endpoint for `https://<your domain>/api/stripe/webhook` in the Stripe Dashboard with the events `checkout.session.completed` and `customer.subscription.created`, `updated`, `deleted`, `paused` and `resumed`, and use its signing secret.
+
+Without the three variables the app runs, the billing page says "Billing is not configured" and the webhook answers 503. In production they are required.
+
+Stripe Tax is off. To charge tax, enable it in the Dashboard, set the products' tax code, and add `automatic_tax: { enabled: true }` and `customer_update: { address: "auto" }` to the Checkout session in `packages/billing/src/checkout.ts`.
+
 ## Scripts
 
 | Command             | Description                        |
@@ -90,6 +107,7 @@ Set Deployment branches of the `hosted` environment to `main` and `dev`. That is
 | `yarn format`       | Format the codebase with Prettier  |
 | `yarn format:check` | Check formatting                   |
 | `yarn docker:up`    | Build and run the app in Docker    |
+| `yarn stripe:seed`  | Create Stripe products and prices  |
 
 ## Continuous integration
 

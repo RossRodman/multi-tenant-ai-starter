@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Client, MembershipRole } from "@repo/db";
 
+import { SEAT_LIMIT_REACHED } from "../pg-errors";
 import { inviteMembers } from "./invite";
 import type { InviteResult } from "./invite";
 
@@ -63,10 +64,13 @@ export async function listMyInvitations(client: Client, email: string): Promise<
 export async function acceptInvitation(
   client: Client,
   id: string,
-): Promise<{ ok: true; slug: string } | { ok: false; error: "not_available" | "unknown" }> {
+): Promise<
+  { ok: true; slug: string } | { ok: false; error: "not_available" | "seat_limit" | "unknown" }
+> {
   const { data, error } = await client.rpc("accept_invitation", { invitation_id: id });
   if (error) {
     if (error.code === NOT_AVAILABLE) return { ok: false, error: "not_available" };
+    if (error.code === SEAT_LIMIT_REACHED) return { ok: false, error: "seat_limit" };
     console.error("Unexpected invitation error", { code: error.code, message: error.message });
     return { ok: false, error: "unknown" };
   }
