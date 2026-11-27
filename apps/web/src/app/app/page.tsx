@@ -1,5 +1,4 @@
 import type { Route } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -12,7 +11,7 @@ import { memberCountLabel } from "@/lib/format";
 import { roleLabel } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { listMyInvitations } from "@/server/invitations";
-import { LAST_ORG_COOKIE, listOrganizations } from "@/server/organizations";
+import { lastOpenedOrganization, listOrganizations } from "@/server/organizations";
 import { requireUser } from "@/server/session";
 import { getSupabase } from "@/server/supabase/client";
 
@@ -35,15 +34,16 @@ export default async function AppHomePage({
   const { invitation } = params;
   const invitationParam = typeof invitation === "string" ? invitation : undefined;
 
-  const [organizations, invitations] = await Promise.all([
+  const [organizations, invitations, lastOrg] = await Promise.all([
     listOrganizations(client, user.id),
     user.email ? listMyInvitations(client, user.email) : [],
+    lastOpenedOrganization(client),
   ]);
 
   const destination = appDestination({
     invitationParam,
     pendingInvitations: invitations.length,
-    lastOrg: (await cookies()).get(LAST_ORG_COOKIE)?.value,
+    lastOrg,
     organizations,
   });
   if (destination.kind === "redirect") redirect(`/o/${destination.slug}` as Route);

@@ -6,7 +6,7 @@ A multi-tenant SaaS starter built with Next.js, Supabase and Stripe, with a Clau
 
 ```
 apps/
-  web/            Next.js application (UI in src/app, backend code in src/server)
+  web/            Next.js application (UI in src/app, backend code in src/server, demo module in src/demo)
 packages/
   config/         Shared TypeScript and ESLint configuration
   billing/        Plans config, Stripe sync, Checkout, Customer Portal and webhook handling
@@ -94,6 +94,19 @@ On a hosted deployment, add an endpoint for `https://<your domain>/api/stripe/we
 Without the three variables the app runs, the billing page says "Billing is not configured" and the webhook answers 503. In production they are required.
 
 Stripe Tax is off. To charge tax, enable it in the Dashboard, set the products' tax code, and add `automatic_tax: { enabled: true }` and `customer_update: { address: "auto" }` to the Checkout session in `packages/billing/src/checkout.ts`.
+
+## Demo module
+
+Tickets are a small demo domain so the tenancy rules and the agent have data to work on: every member of an organization sees its tickets, authors edit, close and delete their own, and admins and owners any. Search uses Postgres full-text search with the `english` configuration; for another language, change it in the migration and in `apps/web/src/demo/tickets/tickets.ts`.
+
+The core never imports the module (ESLint enforces it), so it can be removed or replaced with your own domain:
+
+1. Delete `apps/web/src/demo/`, `apps/web/src/app/o/[slug]/(demo)/` and `apps/web/test/demo/`.
+2. Remove the `demoNavLinks` import and spread from `apps/web/src/app/o/[slug]/nav-links.tsx`.
+3. Delete `supabase/migrations/20261126120000_demo_tickets.sql` if it was never applied to a hosted project; otherwise add a migration that drops `public.tickets` and `private.touch_ticket()`.
+4. Run `yarn db:reset && yarn db:types`.
+
+A replacement module follows the same layout: its own migration with RLS, a folder under `src/demo/` with functions that take the user's client and the organization, routes under `(demo)`, and one entry in the navigation.
 
 ## Scripts
 

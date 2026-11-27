@@ -5,6 +5,8 @@ import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+// eslint-disable-next-line no-restricted-imports -- the one place the core registers the demo module
+import { demoNavLinks } from "@/demo/nav";
 import { cn } from "@/lib/utils";
 
 function Icon({ children }: { children: ReactNode }) {
@@ -51,6 +53,7 @@ export function NavLinks({ slug, showSettings }: { slug: string; showSettings: b
   const base = `/o/${slug}`;
   const links = [
     { href: base, label: "Overview", icon: icons.overview },
+    ...demoNavLinks(base),
     { href: `${base}/members`, label: "Members", icon: icons.members },
     ...(showSettings
       ? [
@@ -60,16 +63,19 @@ export function NavLinks({ slug, showSettings }: { slug: string; showSettings: b
       : []),
   ];
 
+  const isActive = (href: string) =>
+    pathname === href || (href !== base && pathname.startsWith(`${href}/`));
+
   return (
     <nav aria-label="Organization" className="flex flex-col gap-0.5">
       {links.map(({ href, label, icon }) => (
         <Link
           key={href}
           href={href as Route}
-          aria-current={pathname === href ? "page" : undefined}
+          aria-current={isActive(href) ? "page" : undefined}
           className={cn(
             "flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium hover:bg-foreground/5",
-            pathname === href && "bg-accent font-semibold text-accent-foreground hover:bg-accent",
+            isActive(href) && "bg-accent font-semibold text-accent-foreground hover:bg-accent",
           )}
         >
           <Icon>{icon}</Icon>
