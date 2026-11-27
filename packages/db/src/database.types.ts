@@ -97,6 +97,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"tickets": {
+                  Row: {
+                    "body": string,"closed_at": string | null,"created_at": string,"created_by": string | null,"id": string,"organization_id": string,"search": unknown,"status": string,"title": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body"?: string,"closed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"organization_id": string,"search"?: never,"status"?: string,"title": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "body"?: string,"closed_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"organization_id"?: string,"search"?: never,"status"?: string,"title"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tickets_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
@@ -112,8 +132,14 @@ isOneToOne: false
 "billing_organization_for_customer":
 { Args: { "stripe_customer_id": string }; Returns: string
                            },
+"last_opened_organization":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "link_billing_customer":
 { Args: { "organization_id": string,"stripe_customer_id": string }; Returns: string
+                           },
+"mark_organization_opened":
+{ Args: { "slug": string }; Returns: undefined
                            },
 "organization_members":
 { Args: { "organization_id": string }; Returns: {

@@ -9,6 +9,7 @@ import { isSlug } from "@/lib/slug";
 import { safeNext } from "../auth/safe-next";
 import { getServerEnv } from "../env";
 import { LAST_ORG_COOKIE, lastOrgCookieOptions } from "../organizations/last-org";
+import { markOrganizationOpened } from "../organizations/opened";
 import { hardenCookies } from "./cookies";
 
 const ORGANIZATION_PATH = /^\/o\/([^/]+)/;
@@ -68,6 +69,7 @@ export async function refreshSession(request: NextRequest) {
     !isPrefetch(request) &&
     request.cookies.get(LAST_ORG_COOKIE)?.value !== slug
   ) {
+    await markOrganizationOpened(supabase, slug);
     response.cookies.set(LAST_ORG_COOKIE, slug, lastOrgCookieOptions(env.appUrl));
   }
   return response;

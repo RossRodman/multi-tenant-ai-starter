@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
+import pg from "pg";
 import { describe, expect, it } from "vitest";
 
 import { LAST_ORG_COOKIE } from "../src/server/organizations";
 import { refreshSession } from "../src/server/supabase/proxy";
-import "./env";
+import { env } from "./env";
 import {
   createAdminClient,
   createTestClient,
@@ -88,6 +89,41 @@ describe("last organization cookie", () => {
         maxAge: 365 * 24 * 60 * 60,
       });
     } finally {
+      await createAdminClient().auth.admin.deleteUser(userId);
+    }
+  });
+
+  it("records the opening for a member, once per change of organization", async () => {
+    const { cookies, userId } = await signedInCookies();
+    const db = new pg.Client({ connectionString: env.dbUrl });
+    await db.connect();
+    const slug = `proxy-${crypto.randomUUID().slice(0, 8)}`;
+    try {
+      await db.query("begin");
+      await db.query("select set_config('request.jwt.claims', $1, true)", [
+        JSON.stringify({ sub: userId }),
+      ]);
+      await db.query("insert into public.organizations (name, slug) values ('Proxy', $1)", [slug]);
+      await db.query("commit");
+      const openedAt = async () =>
+        (
+          await db.query<{ at: Date }>(
+            "select opened_at as at from private.last_opened_organizations where user_id = $1",
+            [userId],
+          )
+        ).rows[0]?.at;
+
+      await refreshSession(request(`/o/${slug}`, cookies));
+      const first = await openedAt();
+      expect(first).toBeInstanceOf(Date);
+
+      await refreshSession(
+        request(`/o/${slug}/members`, [...cookies, { name: LAST_ORG_COOKIE, value: slug }]),
+      );
+      expect(await openedAt()).toEqual(first);
+    } finally {
+      await db.query("delete from public.organizations where slug = $1", [slug]);
+      await db.end();
       await createAdminClient().auth.admin.deleteUser(userId);
     }
   });

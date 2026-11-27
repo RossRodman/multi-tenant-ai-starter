@@ -6,11 +6,13 @@ import { SLUG_MAX, SLUG_PATTERN, toSlug } from "@/lib/slug";
 import {
   createOrganization,
   getOrganization,
+  lastOpenedOrganization,
   listOrganizations,
+  markOrganizationOpened,
   updateOrganization,
 } from "../src/server/organizations";
 import { env } from "./env";
-import { createAdminClient, createUser } from "./harness";
+import { createAdminClient, createTestClient, createUser } from "./harness";
 
 const db = new pg.Client({ connectionString: env.dbUrl });
 await db.connect();
@@ -323,5 +325,83 @@ describe("updateOrganization", () => {
       ok: false,
       error: "forbidden",
     });
+  });
+});
+
+describe("last opened organization", () => {
+  async function storedSlug(userId: string) {
+    const { rows } = await db.query<{ slug: string }>(
+      `select o.slug from private.last_opened_organizations l
+       join public.organizations o on o.id = l.organization_id where l.user_id = $1`,
+      [userId],
+    );
+    return rows[0]?.slug;
+  }
+
+  it("records the caller's own opening and returns it to them only", async () => {
+    const opener = await createUser("open-opener");
+    const colleague = await createUser("open-colleague");
+    onTestFinished(() => cleanup([opener.id, colleague.id]));
+    const [first, second] = [`first-${run}`, `second-${run}`];
+    await createOrganization(opener.client, { name: nextName("Alpha"), slug: first });
+    await createOrganization(opener.client, { name: nextName("Beta"), slug: second });
+    await db.query(
+      "insert into public.memberships select id, $2, 'member' from public.organizations where slug = $1",
+      [first, colleague.id],
+    );
+
+    expect(await lastOpenedOrganization(opener.client)).toBeUndefined();
+    expect(await markOrganizationOpened(opener.client, second)).toBe(true);
+    expect(await markOrganizationOpened(opener.client, first)).toBe(true);
+    expect(await lastOpenedOrganization(opener.client)).toBe(first);
+    expect(await storedSlug(colleague.id)).toBeUndefined();
+    expect(await lastOpenedOrganization(colleague.client)).toBeUndefined();
+  });
+
+  it("ignores an organization the caller doesn't belong to", async () => {
+    const outsider = await createUser("open-outsider");
+    onTestFinished(() => cleanup([outsider.id]));
+    const slug = `closed-${run}`;
+    await createOrganization(owner.client, { name: nextName(), slug });
+
+    expect(await markOrganizationOpened(outsider.client, slug)).toBe(true);
+    expect(await storedSlug(outsider.id)).toBeUndefined();
+    expect(await lastOpenedOrganization(outsider.client)).toBeUndefined();
+  });
+
+  it("forgets an organization the user has left", async () => {
+    const leaver = await createUser("open-leaver");
+    onTestFinished(() => cleanup([leaver.id]));
+    const slug = `left-${run}`;
+    await createOrganization(owner.client, { name: nextName(), slug });
+    await db.query(
+      "insert into public.memberships select id, $2, 'member' from public.organizations where slug = $1",
+      [slug, leaver.id],
+    );
+    await markOrganizationOpened(leaver.client, slug);
+    await db.query("delete from public.memberships where user_id = $1", [leaver.id]);
+
+    expect(await lastOpenedOrganization(leaver.client)).toBeUndefined();
+  });
+
+  it("is out of reach of the Data API, and anon can't call the functions", async () => {
+    const member = await createUser("open-direct");
+    onTestFinished(() => cleanup([member.id]));
+    await createOrganization(member.client, { name: nextName(), slug: `direct-${run}` });
+    await markOrganizationOpened(member.client, `direct-${run}`);
+
+    const direct = await member.client.from("last_opened_organizations" as "memberships").select();
+    expect(direct.error).not.toBeNull();
+    const memberships = await member.client.from("memberships").select("*").limit(1);
+    expect(memberships.data).toHaveLength(1);
+    expect(Object.keys(memberships.data?.[0] ?? {})).not.toContain("last_opened_at");
+
+    const { client: anon } = createTestClient();
+    for (const call of [
+      anon.rpc("mark_organization_opened", { slug: `direct-${run}` }),
+      anon.rpc("last_opened_organization"),
+    ]) {
+      expect((await call).error?.code).toBe("42501");
+    }
   });
 });
